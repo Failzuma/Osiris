@@ -1,30 +1,52 @@
-name: Windows
+name: Build Windows
 
-on:
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 0"
   push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      MSBUILD_PATH: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-      
-    - name: Build
-      shell: cmd
-      run: |
-        "%MSBUILD_PATH%\MSBuild.exe" Source/Osiris.vcxproj /p:Platform=Win32 /p:Configuration=Release -m
+    - name: Checkout
+      uses: actions/checkout@v3
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
+    - name: Install MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Clone
+      shell: bash
+      run: git clone --recurse-submodules https://github.com/danielkrupinski/Osiris
+        
+    - name: Build solution
+      working-directory: ./Osiris
+      env:
+        SOLUTION_FILE_PATH: ./Osiris.sln
+        BUILD_CONFIGURATION: Release
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+        
+    - name: Removing unused files
+      shell: bash
+      run: |
+        ls -lR --group-directories-first
+        rm -rf ./Osiris/x64/Release/*.pdb
+        rm -rf ./Osiris/x64/Release/*.ipdb
+        rm -rf ./Osiris/x64/Release/*.obj
+        rm -rf ./Osiris/x64/Release/*.iobj
+        rm -rf ./Osiris/x64/Release/*.txt
+        rm -rf ./Osiris/x64/Release/*.recipe
+        rm -rf ./Osiris/x64/Release/*.tlog
+      
+    - name: Upload to github
+      uses: actions/upload-artifact@v3.1.2
       with:
-        name: Osiris-${{ github.run_id }}
-        path: Source/Osiris/Release/Osiris.dll
+        name: StarRail-GC-Release
+        path: ./Osiris/x64/Release/*
+        if-no-files-found: error
