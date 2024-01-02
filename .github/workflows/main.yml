@@ -47,6 +47,6 @@ jobs:
     - name: Upload to github
       uses: actions/upload-artifact@v3.1.2
       with:
-        name: StarRail-GC-Release
+        name: Osiris
         path: ./Osiris/x64/Release/*
         if-no-files-found: error
